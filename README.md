@@ -11,6 +11,7 @@ Windows用戶請到[Releases](https://github.com/kirbyloco/Pixiv_Downloader/rele
 |下載多圖|開發中...|V0.0.2|
 |下載並合併GIF|開發中...||
 |切換R-18下載|開發中...||
+|異步下載(非同步)|開發中...|這部分還在學習|
 
 # 使用Python執行
 ## 需要：
