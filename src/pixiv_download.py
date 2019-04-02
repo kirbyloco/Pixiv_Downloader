@@ -1,9 +1,9 @@
-def medium(self, ID):
-		url = 'https://www.pixiv.net/ajax/illust/' + ID
+def medium_manga(self, ID):
+		url = 'https://www.pixiv.net/ajax/illust/' + ID + '/pages'
 		html = self.session.get(url)
 		x = json.loads(html.text)
-		link = x['body']['urls']['original']
-		self.download(link)
+		for url in x['body']:
+			self.download(url['urls']['original'])
 
 def download(self, link):
 	urlsplit = str.split(link,'/')
@@ -15,14 +15,14 @@ def download(self, link):
 			file.write(img.content)
 			file.close
 		print(link + ' 下載完成')
+	return
 
 def getjson(self, ID):
 	Url = 'https://www.pixiv.net/ajax/user/' + ID + '/profile/all'
 	illustsjson = json.loads(self.session.get(Url).text)
 	illusts = illustsjson['body']['illusts']
 	for key,values in illusts.items():
-		print(key)
-		self.medium(ID=key)
+		self.medium_manga(ID=key)
 
 def menu(self):
 	print('1.作者UID\n2.作品UID')
