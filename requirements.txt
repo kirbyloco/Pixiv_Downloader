@@ -3,3 +3,5 @@ re
 http.cookiejar
 json
 os
+imageio
+zipfile
