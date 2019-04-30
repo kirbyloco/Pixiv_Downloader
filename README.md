@@ -10,6 +10,7 @@ Windows用戶請到[Releases](https://github.com/kirbyloco/Pixiv_Downloader/rele
 |下載單一圖片|V0.0.2||
 |下載多圖|V0.0.2||
 |下載並合併GIF|V0.0.3||
+|自動更新程式|Beta|學習中...|
 |切換R-18下載|開發中...|V0.0.5|
 |異步下載(非同步)|開發中...||
 
