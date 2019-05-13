@@ -21,16 +21,15 @@ def update():
 
 def WriteRestartCmd(exe_name):
 	b = open("upgrade.bat",'w')
-	TempList = "@echo off\n";
-	TempList += "if not exist " + exe_name + " exit \n";
-	TempList += "ping 127.0.0.1 > NUL \n";
+	TempList = "@echo off\n"
+	TempList += "ping 127.0.0.1 > NUL \n"
 	TempList += "del pixiv_downloader.exe \n"
 	TempList += "rename pixiv_downloader_new.exe pixiv_downloader.exe \n"
 	TempList += "start " + exe_name
 	b.write(TempList)
 	b.close()
 	subprocess.Popen("upgrade.bat")
-	return
+	os._exit(0)
 
 if __name__ == "__main__":
 	#WriteRestartCmd('pixiv_downloader.exe')
