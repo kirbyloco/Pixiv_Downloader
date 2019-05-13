@@ -3,19 +3,28 @@ import re
 import json
 import os
 import imageio, zipfile
+from update import update
 
 class PixivSpider(object):
 	def __init__(self):
 		self.session = requests.Session()
 		self.headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.96 Safari/537.36'}
+		self.session.mount('http://', requests.adapters.HTTPAdapter(max_retries=3))
+		self.session.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))
 		self.session.headers = self.headers
 		self.session.cookies = http.cookiejar.LWPCookieJar(filename='cookies')
 		try:
-			# 加载cookie
+			# 載入cookie
 			self.session.cookies.load(filename='cookies', ignore_discard=True)
 		except:
 			print('cookies不能載入')
-
+		try:
+			if not os.path.exists('./pixiv'):
+				os.makedirs('./pixiv')
+		except OSError:
+			print ('無法建立資料夾./pixiv')
+		if os.path.isfile('upgrade.bat'):
+			os.remove('upgrade.bat')
 		self.params ={
 			'lang': 'en',
 			'source': 'pc',
@@ -62,11 +71,11 @@ class PixivSpider(object):
 		# 發送post模擬登入
 		result = self.session.post(post_url, data=self.datas)
 		if self.already_login():
+			# 儲存cookies
+			self.session.cookies.save(ignore_discard=True, ignore_expires=True)
 			return
 		else:
 			self.login()
-		# 儲存cookies
-		self.session.cookies.save(ignore_discard=True, ignore_expires=True)
 
 	def medium_manga(self, ID):
 		url = 'https://www.pixiv.net/ajax/illust/' + ID + '/pages'
@@ -138,6 +147,7 @@ class PixivSpider(object):
 			spider.medium_manga(ID)
 
 if __name__ == "__main__":
+	update()
 	spider = PixivSpider()
 	if spider.already_login():
 		print('用戶已經登入')
