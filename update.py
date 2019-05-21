@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 
-metaversion = 'V0.0.4'
+metaversion = 'V0.0.5'
 
 def update():
 	print('檢查更新中...')
