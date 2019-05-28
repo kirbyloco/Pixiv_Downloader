@@ -1,5 +1,5 @@
 # Pixiv_Downloader
-基於Python寫出的P站下載器  版本：V0.0.5
+基於Python寫出的P站下載器  版本：V0.0.6
 
 Windows用戶請到[Releases](https://github.com/kirbyloco/Pixiv_Downloader/releases)頁面下載
 

@@ -150,6 +150,7 @@ class PixivSpider(object):
         print('1.作者UID    3.是否下載R-18圖片 目前=' + self.adult + ' 0=關閉 1=開啟\n2.作品UID')
         mode = str(input('請輸入數字選擇：'))
         if mode == '1':
+            ID = input('請輸入作者ID：')
             spider.getjson(ID)
         elif mode == '2':
             ID = input('請輸入作品ID：')
