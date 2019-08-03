@@ -3,15 +3,25 @@ import requests
 import re
 import http.cookiejar
 import json
-import os
+import os, shutil, sys
 import time
-import imageio
-import zipfile
+import imageio, zipfile
 import asyncio, aiohttp
+from update import update
 
 class PixivSpider(object):
 	def __init__(self):
+		if sys.platform == 'win32':
+			loop = asyncio.ProactorEventLoop()
+			asyncio.set_event_loop(loop)
+		if os.path.isfile('upgrade.bat'):
+			os.remove('upgrade.bat')
+		self.dir = os.path.join('.','pixiv','')
+		self.tempdir = os.path.join('.','temp')
 		self.adult = '0'
+		self.cookies = {}
+		self.ImgID = []
+		self.ImgID2 = []
 		self.ImgUrl = []
 		self.gifID = []
 		self.session = requests.Session()
@@ -26,10 +36,10 @@ class PixivSpider(object):
 		except:
 			print('cookies不能載入')
 		try:
-			if not os.path.exists('./pixiv'):
-				os.makedirs('./pixiv')
+			if not os.path.exists(self.dir):
+				os.makedirs(self.dir)
 		except OSError:
-			print ('無法建立資料夾./pixiv')
+			print ('無法建立資料夾' + self.dir)
 		self.params ={
 			'lang': 'zh_tw',
 			'source': 'pc',
@@ -74,75 +84,75 @@ class PixivSpider(object):
 		# 發送post模擬登入
 		result = self.session.post(post_url, data=self.datas)
 		if self.already_login():
+			self.session.cookies.save(ignore_discard=True, ignore_expires=True)
 			return
 		else:
 			self.login()
 		# 儲存cookies
-		self.session.cookies.save(ignore_discard=True, ignore_expires=True)
 	
 	def web(self, ID):
-		if ID == 'NULL':
-			ID = input('請輸入作品ID：')
 		if self.adult == '0':
-			if 'R-18' in self.tagcheck(ID):
+			if ID in self.ImgID2:
 				#print('檢查到有R-18的圖片即將略過')
 				pass
 			else:
-				self.medium_manga(ID)
+				self.ImgID.append(ID)
 		else:
-			self.medium_manga(ID)
+			self.ImgID.append(ID)
 
-	def medium_manga(self,ID):
+	async def medium_manga(self,ID):
 		url = 'https://www.pixiv.net/ajax/illust/' + ID + '/pages'
-		html = self.session.get(url)
-		x = json.loads(html.text)
-		if x['body'][0]['urls']['original'].find('ugoira') == -1:
-			for url in x['body']:
-				self.ImgUrl.append(url['urls']['original'])
-		else:
-			self.gifID.append(ID)
+		async with aiohttp.ClientSession(cookies=self.cookies) as session:
+			html = await session.get(url)
+			x = json.loads(await html.text())
+			if x['body'][0]['urls']['original'].find('ugoira') == -1:
+				for url in x['body']:
+					self.ImgUrl.append(url['urls']['original'])
+			else:
+				self.gifID.append(ID)
 
-	def gif(self,ID):
+	async def gif(self,ID):
+		ID_temp = os.path.join('.','temp',ID)
 		url = 'https://www.pixiv.net/ajax/illust/' + ID + '/ugoira_meta'
-		html = self.session.get(url)
-		x = json.loads(html.text)
-		link = x['body']['originalSrc']
-		delay = (x['body']['frames'][0]['delay'] / 1000)
-		urlsplit = str.split(link,'/')
-		gif_name = urlsplit[-1][0:-4] + '.gif'
-		if os.path.isfile('./pixiv/' + gif_name):
-			print(gif_name + ' 已下載過了')
-		else:
-			imgzip = requests.get(link,headers={'Referer':'https://www.pixiv.net/'})
-			with open(urlsplit[-1], 'wb') as file:
-				file.write(imgzip.content)
-				file.close
-			with zipfile.ZipFile(urlsplit[-1] ,'r') as file:
-				file.extractall()
-				image_list = file.namelist()
-			os.remove(urlsplit[-1])
-			self.create_gif(image_list, gif_name, delay)
-			print('ID：' + ID + ' GIF建立成功')
-			for i in image_list:
-				os.remove(i)
+		async with aiohttp.ClientSession(cookies=self.cookies) as session:
+			html = await session.get(url)
+			x = json.loads(await html.text())
+			link = x['body']['originalSrc']
+			delay = (x['body']['frames'][0]['delay'] / 1000)
+			urlsplit = str.split(link,'/')
+			gif_name = urlsplit[-1][0:-4] + '.gif'
+			if os.path.isfile(self.dir + gif_name):
+				print(gif_name + ' 已下載過了')
+			else:
+				imgzip = await session.get(link,headers={'Referer':'https://www.pixiv.net/'})
+				content = await imgzip.read()
+				with open(os.path.join('.','temp',urlsplit[-1]), 'wb') as file:
+					file.write(content)
+					file.close
+				with zipfile.ZipFile(os.path.join('.','temp',urlsplit[-1]) ,'r') as file:
+					os.makedirs(ID_temp)
+					file.extractall(ID_temp)
+					image_list = file.namelist()
+				await self.create_gif(image_list, gif_name, delay, ID_temp)
+				print('ID：' + ID + ' GIF建立成功')
 
-	def create_gif(self, image_list, gif_name, delay):
+	async def create_gif(self, image_list, gif_name, delay, ID_temp):
 		frames = []
 		for image_name in image_list:
-			frames.append(imageio.imread(image_name))
+			frames.append(imageio.imread(os.path.join(ID_temp,image_name)))
 		# Save them as frames into a gif 
-		imageio.mimsave('./pixiv/' + gif_name, frames, 'GIF', duration = delay)
+		imageio.mimsave(self.dir + gif_name, frames, 'GIF', duration = delay)
 		return
 
 	async def download(self, link):
 		urlsplit = str.split(link,'/')
-		if os.path.isfile('./pixiv/' + urlsplit[-1]):
+		if os.path.isfile(self.dir + urlsplit[-1]):
 			print(link + ' 已下載過了')
 		else:
 			async with aiohttp.ClientSession() as session:
 				response = await session.get(link,headers={'Referer':'https://www.pixiv.net/'})
 				content = await response.read()
-			with open ('./pixiv/' + urlsplit[-1] ,'wb') as file:
+			with open (self.dir + urlsplit[-1] ,'wb') as file:
 				file.write(content)
 			print(link + ' 下載完成')
 		return
@@ -151,25 +161,33 @@ class PixivSpider(object):
 		urlID = input('請輸入作者ID：')
 		print('正在收集圖片URL')
 		Url = 'https://www.pixiv.net/ajax/user/' + urlID + '/profile/all'
-		illustsjson = json.loads(self.session.get(Url).text)
-		illusts = illustsjson['body']['illusts']
+		IDjson = json.loads(self.session.get(Url).text)
+		illusts = IDjson['body']['illusts']
+		manga = IDjson['body']['manga']
 		for key,values in illusts.items():
 			self.web(ID=key)
+		if manga != []:
+			for key,values in manga.items():
+				self.web(ID=key)
+		self.tagcheck(urlID)
 
-	def tagcheck(self, ID):
-		url = 'https://www.pixiv.net/ajax/illust/' + ID
-		html = self.session.get(url)
-		v = json.loads(html.text)
-		tag = v['body']['tags']['tags'][0]['tag']
-		return tag
+	def tagcheck(self, urlID):
+		Url = 'https://www.pixiv.net/ajax/user/' + urlID + '/illustmanga/tag?tag=R-18&offset=0&limit=9999'
+		v = json.loads(self.session.get(Url).text)
+		tag = v['body']['works']
+		for total in tag:
+			self.ImgID2.append(total['id'])
 
 	def menu(self):
 		print('1.作者UID    3.是否下載R-18圖片 目前=' + self.adult + ' 0=關閉 1=開啟\n2.作品UID')
 		mode = str(input('請輸入數字選擇：'))
 		if mode == '1':
-			self.main(0)
+			self.getjson()
+			self.main()
 		elif mode == '2':
-			self.main(1)
+			ID = input('請輸入ID：')
+			self.ImgID.append(ID)
+			self.main()
 		else:
 			self.switchadult()
 
@@ -182,22 +200,27 @@ class PixivSpider(object):
 			self.adult = '1'
 		self.menu()
 
-	def main(self,web):
+	def main(self):
+		os.makedirs(self.tempdir)
 		start = time.time()
-		if web == 0:
-			self.getjson()
-		else:
-			self.web('NULL')
-		tasks = [asyncio.ensure_future((self.download(link))) for link in self.ImgUrl]
+		for item in self.session.cookies:
+			self.cookies[item.name] = item.value
 		loop = asyncio.get_event_loop()
-		try:
-			loop.run_until_complete(asyncio.wait(tasks))
-		finally:
-			[self.gif(ID) for ID in self.gifID]
+		if self.ImgID != []:
+			idtasks = [asyncio.ensure_future((self.medium_manga(ID))) for ID in self.ImgID]
+			loop.run_until_complete(asyncio.wait(idtasks))
+		if self.ImgUrl != []:
+			imgtasks = [asyncio.ensure_future((self.download(link))) for link in self.ImgUrl]
+			loop.run_until_complete(asyncio.wait(imgtasks))
+		if self.gifID != []:
+			giftasks = [asyncio.ensure_future((self.gif(ID))) for ID in self.gifID]
+			loop.run_until_complete(asyncio.wait(giftasks))
 		end = time.time()
-		print(int(end-start))
+		print('總共花了' + str(int(end-start)) + '秒')
+		shutil.rmtree(self.tempdir)
 
 if __name__ == "__main__":
+	update()
 	spider = PixivSpider()
 	if spider.already_login():
 		print('用戶已經登入')
