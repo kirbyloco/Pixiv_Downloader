@@ -5,9 +5,11 @@ import subprocess
 
 metaversion = 'V0.1.0'
 
+
 def update():
     print('檢查更新中...')
-    updatedata = requests.get('https://raw.githubusercontent.com/kirbyloco/Pixiv_Downloader/master/version.json')
+    updatedata = requests.get(
+        'https://raw.githubusercontent.com/kirbyloco/Pixiv_Downloader/master/version.json')
     updatejson = json.loads(updatedata.text)
     if updatejson['Version'] > metaversion:
         print('有可以更新的檔案，版本：' + updatejson['Version'])
@@ -18,6 +20,7 @@ def update():
         print('更新完成')
     else:
         print('目前為最新版本')
+
 
 def WriteRestartCmd(exe_name):
     b = open("upgrade.bat", 'w')
@@ -30,6 +33,7 @@ def WriteRestartCmd(exe_name):
     b.close()
     subprocess.Popen("upgrade.bat")
     os._exit(0)
+
 
 if __name__ == "__main__":
     # WriteRestartCmd('pixiv_downloader.exe')

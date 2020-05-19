@@ -31,12 +31,14 @@ datas = {
     'return_to': 'https://www.pixiv.net/'
 }
 
+
 def get_postkey():
     login_url = 'https://accounts.pixiv.net/login'  # 登入的URL
     res = session.get(login_url, params=params)  # 抓取登入頁面
     pattern = re.compile(r'name="post_key" value="(.*)">')  # 提取post_key
     r = pattern.findall(res.text)
     datas['post_key'] = r[0]
+
 
 def already_login():
     # 嘗試進入帳號設定介面，來判斷是否登入成功
@@ -46,6 +48,7 @@ def already_login():
         return True
     else:
         return False
+
 
 def login():
     account = input('請輸入用戶名或信箱\n> ')
@@ -64,12 +67,14 @@ def login():
     else:
         login()
 
+
 def test_login():
     if already_login():
         print('用戶已經登入')
         return session
     else:
         login()
+
 
 if __name__ == "__main__":
     test_login()
